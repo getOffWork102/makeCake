@@ -1,0 +1,17 @@
+src/
+├── componenets/
+│   ├── Header/
+│   │   ├── Header.js
+│   │   ├── Header.css
+│   ├── MainPage/
+│   │   ├── MainPage.js
+│   │   ├── MainPage.css
+│   ├── LoginPage/
+│   │   ├── LoginPage.js
+│   │   ├── LoginPage.css
+│   ├── Footer/
+│   │   ├── Footer.js
+│   │   ├── Footer.css
+│   ├── NotFound.js
+├── App.js
+├── index.js
