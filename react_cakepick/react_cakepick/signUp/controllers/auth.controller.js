@@ -2,6 +2,7 @@ import * as authService from '../services/auth.service.js';
 import jwt from 'jsonwebtoken';
 import httpStatus from 'http-status-codes';
 import { tokenBlacklist } from '../app.js';
+//otp 부분 수정해야함
 
 // 보호된 경로에서 실행될 컨트롤러 함수
 export const protectedRout = (req, res) => {
