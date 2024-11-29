@@ -31,9 +31,6 @@ app.use(cors());
 // JSON 형식의 데이터를 파싱하기 위한 미들웨어 설정
 app.use(express.json());
 
-// otp라우터 설정
-app.use('/api/sms', smsRouter);
-
 // 주요 서비스 라우터 연결
 app.use('/api', authRouter);
 
