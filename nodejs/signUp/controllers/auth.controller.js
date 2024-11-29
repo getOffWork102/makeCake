@@ -1,8 +1,11 @@
 import * as authService from '../services/auth.service.js';
 import jwt from 'jsonwebtoken';
+import multer from "multer";
 import httpStatus from 'http-status-codes';
 import { tokenBlacklist } from '../app.js';
-//otp 부분 수정해야함
+
+// multer 설정
+const upload = multer({ storage: multer.memoryStorage() });
 
 // 보호된 경로에서 실행될 컨트롤러 함수
 export const protectedRout = (req, res) => {
@@ -22,48 +25,6 @@ export const getUserData = async (req, res) => {
     return res.status(200).json(userData);  // 사용자 데이터를 클라이언트에 반환
   } catch (error) {
     return res.status(500).json({ message: "사용자 정보 조회 실패" });
-  }
-};
-
-// 이름, 비밀번호 재설정 함수
-export const updateUserD = async (req, res) => {
-
-  const { newNickname, newPassword } = req.body;  // 요청으로부터 새로운 비밀번호를 가져옴
-  const userId = req.user.id;  // JWT로부터 사용자 ID를 가져옴
-
-  try {
-    // 데이터베이스에서 사용자 이름 업데이트
-    await authService.updateUserNickname(userId, newNickname);
-
-    // 비밀번호 해싱
-    const hashedPassword = await authService.hashPassword(newPassword);
-
-    // 데이터베이스에서 사용자 비밀번호 업데이트
-    await authService.updateUserPassword(userId, hashedPassword);
-
-    // 성공적으로 업데이트되면 응답
-    return res.status(httpStatus.OK).json({ success: true, message: "회원정보 재설정 완료" });
-  } catch (error) {
-    return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: "회원정보 재설정 실패: " + error.message });
-  }
-};
-
-// 비밀번호 재설정 함수
-export const updatePassword = async (req, res) => {
-  const { newPassword } = req.body;  // 요청으로부터 새로운 비밀번호를 가져옴
-  const userId = req.user.id;  // JWT로부터 사용자 ID를 가져옴
-
-  try {
-    // 비밀번호 해싱
-    const hashedPassword = await authService.hashPassword(newPassword);
-
-    // 데이터베이스에서 사용자 비밀번호 업데이트
-    await authService.updateUserPassword(userId, hashedPassword);
-
-    // 성공적으로 업데이트되면 응답
-    return res.status(httpStatus.OK).json({ success: true, message: "비밀번호 재설정 완료" });
-  } catch (error) {
-    return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: "비밀번호 재설정 실패: " + error.message });
   }
 };
 
@@ -92,77 +53,53 @@ export const verifyCurrentPassword = async (req, res) => {
   }
 };
 
-// 전화번호 중복 확인 및 OTP 발송
-export const postOtp = async (req, res) => {
-  const { phoneNumber } = req.body;
-  try {
-    // 전화번호 중복 확인
-    const isPhoneExists = await authService.checkPhoneNumber(phoneNumber);
-    if (isPhoneExists) {
-      return res.status(httpStatus.CONFLICT).json("이미 존재하는 전화번호입니다.");
-    }
-
-    // OTP 발송
-    await authService.sendOtp(phoneNumber);
-    return res.status(httpStatus.OK).json({ otpSent: true });
-  } catch (error) {
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json("OTP 발송 실패:" + error.message);
-  }
-};
-
-// 전화번호 존재 확인 및 OTP 발송
-export const onlyPostOtp = async (req, res) => {
-  const { phoneNumber } = req.body;
-  try {
-    // 전화번호 존재 확인
-    const isPhoneExists = await authService.checkPhoneNumber(phoneNumber);
-    if (!isPhoneExists) {
-      return res.status(httpStatus.CONFLICT).json("존재하지 않는 전화번호입니다.");
-    }
-
-    // OTP 발송
-    await authService.sendOtp(phoneNumber);
-    return res.status(httpStatus.OK).json({ otpSent: true });
-  } catch (error) {
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json("OTP 발송 실패:" + error.message);
-  }
-};
-
-// OTP 검증 함수
-export const otpVerification = async (req, res) => {
-  const { phoneNumber, code } = req.body;
-  try {
-    const otpVerified = await authService.verifyOtp(phoneNumber, code);
-    if (!otpVerified) {
-      return res.status(httpStatus.FORBIDDEN).json("OTP 검증 실패");
-    }
-    return res.status(httpStatus.OK).json({ verified: true });
-  } catch (error) {
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json("OTP 검증 실패:" + error.message);
-  }
-};
-
-// 이름, 폰번호, 비밀번호 및 수신 동의 여부 입력 후 회원가입
+//회원가입
 export const signUp = async (req, res) => {
-  const { phoneNumber, nickname, password, receiveNotifications, language, country, region, tags } = req.body;
+  upload.fields([
+    { name: "portfolio1", maxCount: 1 },
+    { name: "portfolio2", maxCount: 1 },
+  ])(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: "파일 업로드 실패: " + err.message });
+    }
 
-  try {
-    // 새로운 필드를 포함하여 사용자 등록
-    await authService.registerUser(phoneNumber, nickname, password, receiveNotifications, language, country, region, tags);
-    return res.status(httpStatus.CREATED).json({ ok: true });
-  } catch (error) {
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json("회원가입 실패: " + error.message);
-  }
+    const { userType, nickname, id, password } = req.body;
+    const files = req.files;
+
+    
+    const jud = await authService.checkID(id);
+    
+    if (jud) {
+      return res.status(httpStatus.UNAUTHORIZED).json({ message: "이미 사용중인 ID입니다." });
+    }
+
+    try {
+      // 각 포트폴리오 이미지 업로드 및 메타데이터 저장
+      for (const key of ["portfolio1", "portfolio2"]) {
+        if (files[key] && files[key][0]) {
+          const file = files[key][0];
+          const imageUrl = await uploadPortfolio(id, file, key);
+          await saveImageMetadata(imageUrl, file.originalname);
+        }
+      }
+
+      // 사용자 정보 저장 (예: UserData 테이블)
+      await supabase.from("UserData").insert({ userType, nickname, id, password });
+
+      res.status(201).json({ message: "회원가입 성공" });
+    } catch (error) {
+      res.status(500).json({ message: "회원가입 실패: " + error.message });
+    }
+  });
 };
-
 
 // 임의 토큰 발급 함수
 export const ghost_user = async (req, res) => {
-  const { phoneNumber } = req.body;
+  const { id } = req.body;
 
   try {
-    // 전화번호로 사용자 찾기
-    const user = await authService.getUserByPhoneNumber(phoneNumber);
+    // id로 사용자 찾기
+    const user = await authService.getUserByID(id);
     
     if (!user) {
       return res.status(httpStatus.UNAUTHORIZED).json({ message: "사용자를 찾을 수 없습니다." });
@@ -183,11 +120,11 @@ export const ghost_user = async (req, res) => {
 
 // 로그인 함수
 export const login = async (req, res) => {
-  const { phoneNumber, password } = req.body;
+  const { id, password } = req.body;
 
   try {
-    // 전화번호로 사용자 찾기
-    const user = await authService.getUserByPhoneNumber(phoneNumber);
+    // id로 사용자 찾기
+    const user = await authService.getUserByID(id);
     if (!user) {
       return res.status(httpStatus.UNAUTHORIZED).json({ message: "사용자를 찾을 수 없습니다." });
     }
@@ -200,7 +137,7 @@ export const login = async (req, res) => {
 
     // JWT 토큰 생성 (비밀 키를 환경 변수에서 가져옴)
     const token = jwt.sign(
-      { id: user.id, phoneNumber: user.phone_number },
+      { id: user.id },
       process.env.JWT_SECRET,  // 이 부분에서 비밀 키 사용
     );
 
@@ -210,41 +147,6 @@ export const login = async (req, res) => {
     return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: "로그인 실패: " + error.message });
   }
 };
-
-// 회원 삭제 함수
-export const deleteUser = async (req, res) => {
-  const { phoneNumber, password } = req.query;  // 클라이언트에서 받은 전화번호와 비밀번호
-  const userIdFromToken = req.user.id;  // JWT에서 추출한 사용자 ID (토큰에 포함된 ID)
-
-  try {
-    // 전화번호로 사용자 찾기 (DB에서 사용자 정보 가져오기)
-    const user = await authService.getUserByPhoneNumber(phoneNumber);
-    if (!user) {
-      return res.status(httpStatus.UNAUTHORIZED).json({ message: "사용자를 찾을 수 없습니다." });
-    }
-
-    // JWT의 사용자 ID와 DB에서 가져온 사용자의 ID가 일치하는지 확인
-    if (user.id !== userIdFromToken) {
-      return res.status(httpStatus.UNAUTHORIZED).json({ message: "본인 계정이 아닙니다." });
-    }
-
-    // 비밀번호 검증 (클라이언트에서 입력된 비밀번호와 DB에 저장된 해시된 비밀번호 비교)
-    const isPasswordValid = await authService.comparePassword(password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(httpStatus.UNAUTHORIZED).json({ message: "비밀번호가 일치하지 않습니다." });
-    }
-
-    // 데이터베이스에서 사용자 삭제
-    await authService.deleteUserById(user.id, phoneNumber);
-
-    // 성공적으로 삭제되면 응답
-    return res.status(httpStatus.OK).json({ success: true, message: "회원이 성공적으로 삭제되었습니다." });
-  } catch (error) {
-    console.error("회원 삭제 중 에러 발생: ", error);  // 에러를 서버 콘솔에 출력
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: "회원 삭제 실패: " + error.message });
-  }
-};
-
 
 // 로그아웃 처리
 export const logout = (req, res) => {

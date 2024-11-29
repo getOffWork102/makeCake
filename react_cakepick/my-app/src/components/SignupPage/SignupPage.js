@@ -29,27 +29,52 @@ const SignupPage = () => {
     setFileError({ ...fileError, [key]: !isImageFile(file) });
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     const { type, nickname, id, password, confirmPassword, portfolio1, portfolio2 } = formData;
-
+  
     if (!type || !nickname || !id || !password || !confirmPassword) {
       setError("모든 항목을 입력해주세요.");
       return;
     }
-
+  
     if (password !== confirmPassword) {
       setError("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
       return;
     }
-
+  
     if (type === "디자이너" && (!portfolio1 || !portfolio2 || fileError.portfolio1 || fileError.portfolio2)) {
       setError("포트폴리오를 모두 올바르게 첨부해주세요.");
       return;
     }
-
-    setError("");
-    navigate("/");
+  
+    try {
+      // FormData 생성
+      const formDataToSend = new FormData();
+      formDataToSend.append("nickname", nickname);
+      formDataToSend.append("id", id);
+      formDataToSend.append("password", password);
+      if (portfolio1) formDataToSend.append("portfolio1", portfolio1);
+      if (portfolio2) formDataToSend.append("portfolio2", portfolio2);
+  
+      // API 호출
+      const response = await fetch("http://localhost:5000/api/signUp", {
+        method: "POST",
+        body: formDataToSend, // FormData 전송
+      });
+  
+      if (response.ok) {
+        alert("회원가입 성공!");
+        navigate("/");
+      } else {
+        const errorData = await response.json();
+        setError(`회원가입 실패: ${errorData.message}`);
+      }
+    } catch (err) {
+      setError(`회원가입 요청 중 오류 발생: ${err.message}`);
+    }
   };
+  
+  
 
   return (
     <div className="signup-container">

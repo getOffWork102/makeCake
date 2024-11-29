@@ -1,6 +1,5 @@
 import express from 'express';
 import authRouter from './routes/auth.routes.js';
-import smsRouter from './routes/sms.routes.js';
 import 'dotenv/config';
 import cors from 'cors'; // CORS 문제를 해결
 
