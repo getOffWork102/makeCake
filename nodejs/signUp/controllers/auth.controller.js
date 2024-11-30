@@ -63,28 +63,23 @@ export const signUp = async (req, res) => {
       return res.status(400).json({ message: "파일 업로드 실패: " + err.message });
     }
 
-    const { userType, nickname, id, password } = req.body;
+    console.log("req.body:", req.body); // userType 값 확인
+
+    const { type: userType, nickname, id, password } = req.body;
     const files = req.files;
 
-    
-    const jud = await authService.checkID(id);
-    
-    if (jud) {
-      return res.status(httpStatus.UNAUTHORIZED).json({ message: "이미 사용중인 ID입니다." });
-    }
-
     try {
-      // 각 포트폴리오 이미지 업로드 및 메타데이터 저장
+      // 포트폴리오 업로드 및 메타데이터 저장
       for (const key of ["portfolio1", "portfolio2"]) {
         if (files[key] && files[key][0]) {
           const file = files[key][0];
-          const imageUrl = await uploadPortfolio(id, file, key);
-          await saveImageMetadata(imageUrl, file.originalname);
+          const imageUrl = await authService.uploadPortfolio(id, file, key); // 서비스 호출
+          await authService.saveImageMetadata(imageUrl, file.originalname);  // 서비스 호출
         }
       }
 
-      // 사용자 정보 저장 (예: UserData 테이블)
-      await supabase.from("UserData").insert({ userType, nickname, id, password });
+      // 사용자 데이터 저장
+      await authService.registerUser( userType, nickname, id, password); // 서비스 호출
 
       res.status(201).json({ message: "회원가입 성공" });
     } catch (error) {
@@ -123,18 +118,21 @@ export const login = async (req, res) => {
   const { id, password } = req.body;
 
   try {
+    console.log(`로그인 요청: ID = ${id}, Password = ${password}`);
     // id로 사용자 찾기
     const user = await authService.getUserByID(id);
     if (!user) {
+      console.log("사용자를 찾을 수 없음");
       return res.status(httpStatus.UNAUTHORIZED).json({ message: "사용자를 찾을 수 없습니다." });
     }
 
     // 비밀번호 검증
-    const isPasswordValid = await authService.comparePassword(password, user.password_hash);
+    const isPasswordValid = await authService.comparePassword(password, user.password);
     if (!isPasswordValid) {
+      console.log("비밀번호가 일치하지 않음");
       return res.status(httpStatus.UNAUTHORIZED).json({ message: "비밀번호가 일치하지 않습니다." });
     }
-
+    console.log("로그인 성공");
     // JWT 토큰 생성 (비밀 키를 환경 변수에서 가져옴)
     const token = jwt.sign(
       { id: user.id },

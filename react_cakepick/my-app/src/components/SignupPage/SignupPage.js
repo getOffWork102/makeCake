@@ -50,14 +50,15 @@ const SignupPage = () => {
     try {
       // FormData 생성
       const formDataToSend = new FormData();
-      formDataToSend.append("nickname", nickname);
+      formDataToSend.append("userType", type);
       formDataToSend.append("id", id);
+      formDataToSend.append("nickname", nickname);
       formDataToSend.append("password", password);
       if (portfolio1) formDataToSend.append("portfolio1", portfolio1);
       if (portfolio2) formDataToSend.append("portfolio2", portfolio2);
   
       // API 호출
-      const response = await fetch("http://localhost:5000/api/signUp", {
+      const response = await fetch("http://localhost:3000/api/signUp", {
         method: "POST",
         body: formDataToSend, // FormData 전송
       });
@@ -87,7 +88,10 @@ const SignupPage = () => {
               type="radio"
               name="type"
               value="의뢰인"
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              onChange={(e) => {
+                console.log("Selected Type:", e.target.value); // 디버깅용 로그
+                setFormData({ ...formData, type: e.target.value });
+              }}
             />
             의뢰인
           </label>

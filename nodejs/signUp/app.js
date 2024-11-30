@@ -2,8 +2,13 @@ import express from 'express';
 import authRouter from './routes/auth.routes.js';
 import 'dotenv/config';
 import cors from 'cors'; // CORS 문제를 해결
+import path from 'path';
+import jwt from 'jsonwebtoken';
 
 const app = express();
+
+// 정적 파일 제공
+app.use(express.static(path.join(path.resolve(), 'public')));
 
 // 토큰 블랙리스트 관리
 export let tokenBlacklist = [];

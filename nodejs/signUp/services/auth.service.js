@@ -47,13 +47,14 @@ export const saveImageMetadata = async (url, name) => {
 // 사용자 등록 함수
 export const registerUser = async (userType, nickname, id, password) => {
   const hashedPassword = await bcrypt.hash(password, 10);  // 비밀번호 해싱
-
+  const virtualMoney = 0;
   const { error } = await supabase
     .from('UserData')  // 'users' 테이블에 사용자 데이터를 삽입
     .insert([{ 
       userType,
       nickname, 
       id,
+      virtualMoney,
       password: hashedPassword 
     }]);
 
